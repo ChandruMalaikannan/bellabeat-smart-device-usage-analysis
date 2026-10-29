@@ -1,1 +1,175 @@
+-- Welome to BELLABEAT SQL Analysis --
+
+-- Imported data successfully --
+
+-- exploring the dataset
+SELECT * FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`
+LIMIT 10;
+
+-- Validating the dataset by counting users and checking dates
+SELECT
+COUNT (*) AS total_records,
+COUNT (DISTINCT id) AS uniue_users,
+MIN(ActivityDate) AS first_date,
+MAX(ActivityDate) AS last_date
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`;
+
+-- Calculatingg Avg steps, MIN & MAX steps aswell
+SELECT
+ROUND(AVG(TotalSteps), 0) AS avg_daily_steps,
+MAX(TotalSteps) AS max_daily_steps,
+MIN(TotalSteps) AS min_daily_steps
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`;
+
+-- Classifying activity level
+
+SELECT
+CASE
+    WHEN TotalSteps < 5000 THEN 'Low'
+    WHEN TotalSteps < 10000 THEN 'Moderate'
+    ELSE 'High'
+END AS activity_level,
+COUNT(*) AS total_days,
+ROUND(
+COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (),1) AS percentage
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`
+GROUP BY activity_level
+ORDER BY
+CASE activity_level
+    WHEN 'Low' THEN 1
+    WHEN 'Moderate' THEN 2
+    WHEN 'High' THEN 3
+END;
+
+
+
+-- analyzing activity by weekdays
+
+WITH daily_data AS (
+SELECT
+FORMAT_DATE('%A', SAFE_CAST(ActivityDate AS DATE)) AS weekday,TotalSteps
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`)
+
+SELECT weekday,
+COUNT(*) AS total_records,
+COUNTIF(TotalSteps < 5000) AS low_activity_records,
+ROUND(COUNTIF(TotalSteps < 5000) * 100.0 / COUNT(*),1) AS low_activity_percentage
+FROM daily_data
+GROUP BY weekday
+ORDER BY
+CASE weekday
+    WHEN 'Sunday' THEN 1
+    WHEN 'Monday' THEN 2
+    WHEN 'Tuesday' THEN 3
+    WHEN 'Wednesday' THEN 4
+    WHEN 'Thursday' THEN 5
+    WHEN 'Friday' THEN 6
+    WHEN 'Saturday' THEN 7
+END;
+
+
+
+-- classifying  users by average daily steps
+
+WITH user_activity AS (
+SELECT Id, COUNT(*) AS recorded_days,
+ROUND(AVG(TotalSteps), 0) AS avg_daily_steps,
+ROUND(AVG(Calories), 0) AS avg_daily_calories,
+ROUND(AVG(SedentaryMinutes), 0) AS avg_sedentary_minutes
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`
+GROUP BY Id)
+
+SELECT Id,recorded_days,
+avg_daily_steps, avg_daily_calories, avg_sedentary_minutes,
+CASE
+  WHEN avg_daily_steps < 5000 THEN 'Low'
+  WHEN avg_daily_steps < 10000 THEN 'Moderate'
+  ELSE 'High'
+END AS user_activity_level
+FROM user_activity
+ORDER BY avg_daily_steps DESC;
+
+
+
+-- counting users in every activity group
+
+WITH user_activity AS (
+SELECT Id, AVG(TotalSteps) AS avg_daily_steps
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`
+GROUP BY Id),
+
+user_groups AS (
+SELECT
+CASE
+    WHEN avg_daily_steps < 5000 THEN 'Low'
+    WHEN avg_daily_steps < 10000 THEN 'Moderate'
+    ELSE 'High'
+END AS activity_level
+FROM user_activity)
+
+SELECT activity_level,
+COUNT(*) AS total_users,
+ROUND(
+COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (),1) AS percentage
+FROM user_groups
+GROUP BY activity_level
+ORDER BY
+CASE activity_level
+  WHEN 'Low' THEN 1
+  WHEN 'Moderate' THEN 2
+  WHEN 'High' THEN 3
+END;
+
+
+-- comparing activity and calories and sedentary time
+
+WITH user_activity AS (
+SELECT Id, AVG(TotalSteps) AS avg_steps,
+AVG(Calories) AS avg_calories,
+AVG(SedentaryMinutes) AS avg_sedentary_minutes
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`
+GROUP BY Id)
+
+SELECT
+CASE
+  WHEN avg_steps < 5000 THEN 'Low'
+  WHEN avg_steps < 10000 THEN 'Moderate'
+  ELSE 'High'
+END AS activity_level,
+COUNT(*) AS total_users,
+ROUND(AVG(avg_steps), 0) AS avg_daily_steps,
+ROUND(AVG(avg_calories), 0) AS avg_daily_calories,
+ROUND(AVG(avg_sedentary_minutes), 0) AS avg_sedentary_minutes
+FROM user_activity
+GROUP BY activity_level
+ORDER BY
+CASE activity_level
+  WHEN 'Low' THEN 1
+  WHEN 'Moderate' THEN 2
+  WHEN 'High' THEN 3
+END;
+
+
+-- Comparingg users consistency and activity
+
+SELECT Id, COUNT(*) AS recorded_days,
+ROUND(AVG(TotalSteps), 0) AS avg_daily_steps,
+ROUND(AVG(Calories), 0) AS avg_daily_calories
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity`
+GROUP BY Id ORDER BY recorded_days DESC, avg_daily_steps DESC LIMIT 10;
+
+
+-- Identifying users with high sedentary time.
+
+SELECT Id,COUNT(*) AS recorded_days,
+ROUND(AVG(TotalSteps), 0) AS avg_daily_steps,
+ROUND(AVG(SedentaryMinutes), 0) AS avg_sedentary_minutes,
+ROUND(AVG(VeryActiveMinutes), 1) AS avg_very_active_minutes,
+ROUND(AVG(LightlyActiveMinutes), 1) AS avg_lightly_active_minutes
+FROM `project-4cde3345-0b0e-4843-9bf.bellabeat.daily_activity` GROUP BY Id
+HAVING COUNT(*) >= 10
+ORDER BY avg_sedentary_minutes DESC LIMIT 10;
+
+
+
 
